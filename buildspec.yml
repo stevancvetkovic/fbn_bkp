@@ -1,0 +1,14 @@
+version: 0.2
+
+phases:
+  build:
+    commands:
+      - chmod +x gradlew
+      - BUILD_NUMBER=$(date +%y%m%d%H%M%S)
+      - ./gradlew -PsetVersion=1.$BUILD_NUMBER clean build -x test
+
+artifacts:
+  files:
+    - build/libs/*.jar
+
+  discard-paths: yes
