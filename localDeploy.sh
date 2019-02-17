@@ -1,10 +1,15 @@
 #!/bin/bash
 
+if [ $# -ne 1 ]; then
+    echo "You must specify the name of the customer for which you want to perform the deployment."
+    exit 1
+fi
+
 # Deployment procedure is customer specific related to configurations, so it takes customer name as input parameter
 customerName=$1
 
 # Load all customer-specific info needed for deployment
-#source "/vagrant/infrastructure/tenants/$customerName/config.sh"
+#source "/vagrant/infrastructure/aws/tenants/$customerName/config.sh"
 MYSQL_HOST="localhost"
 MYSQL_USER="root"
 MYSQL_PASSWORD="Hdte731_32cdjkk"
@@ -31,8 +36,10 @@ Description=Import tool
 After=network.target
 
 [Service]
+WorkingDirectory=/vagrant/build/import-tool
 ExecStart=/usr/bin/dotnet /vagrant/build/import-tool/ExcelProcessor.dll
 Restart=on-failure
+Type=simple
 
 [Install]
 WantedBy=multi-user.target
@@ -42,14 +49,20 @@ systemctl enable importtool
 systemctl restart importtool
 
 echo 'Launch FBN application as a system service'
+mkdir -p /opt/fbn
+echo "/bin/java -Djava.security.egd=file:/dev/./urandom -jar /vagrant/build/libs/fbn-webapp*.jar --spring.config.location=file:/vagrant/build/resources/main/application.properties" > /opt/fbn/start.sh
+echo """kill -15 \`ps -eaf | grep java | grep fbn | awk '{print \$2}'\`""" > /opt/fbn/stop.sh
+chmod +x /opt/fbn/*.sh
 cat > /etc/systemd/system/fbnapp.service <<EOF
 [Unit]
 Description=FBN application
 After=network.target
 
 [Service]
-ExecStart=/bin/java -Djava.security.egd=file:/dev/./urandom -jar /vagrant/build/libs/fbn-webapp*.jar --spring.config.location=file:/vagrant/build/resources/main/application.properties
+ExecStart=/bin/bash /opt/fbn/start.sh
+ExecStop=/bin/bash /opt/fbn/stop.sh
 Restart=on-failure
+Type=simple
 
 [Install]
 WantedBy=multi-user.target
@@ -60,6 +73,7 @@ systemctl restart fbnapp
 
 # Update Nginx config and ensure service is running
 /bin/cp -f /vagrant/infrastructure/aws/nginx-secure/proxy_params /etc/nginx/conf.d/
-/bin/cp -f /vagrant/infrastructure/aws/tenants/$customerName/nginx.conf /etc/nginx/conf.d/default.conf
+#/bin/cp -f /vagrant/infrastructure/aws/tenants/$customerName/nginx.conf /etc/nginx/conf.d/default.conf - for real customers
+/bin/cp -f /vagrant/infrastructure/aws/tenants/local-dev/nginx.conf /etc/nginx/conf.d/default.conf # only for local development
 systemctl start nginx
 systemctl reload nginx

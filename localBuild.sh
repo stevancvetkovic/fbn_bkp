@@ -17,7 +17,7 @@ cp -r fbn-web/dist/fbn-web/* build/resources/main/static
 
 echo 'Building Spring Boot app'
 BUILD_NUMBER=$(date +%y%m%d%H%M%S)
-./gradlew -PsetVersion=1.$BUILD_NUMBER clean build -x test
+./gradlew -PsetVersion=1.$BUILD_NUMBER build -x test
 
 echo 'Building Export/Import tool'
 cd infrastructure/import/ExcelProcessor
